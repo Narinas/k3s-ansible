@@ -40,6 +40,7 @@
   ansible.builtin.lineinfile:
     path: "{{ systemd_dir }}/k3s-agent.service.env"
     line: "{{ item }}"
+    create: true
   with_items:
     - "K3S_TOKEN={{ token }}"
 
@@ -51,6 +52,19 @@
     owner: root
     group: root
     mode: "u=rw,g=r,o=r"
+
+- name: Agent SELinux policies
+  block:
+    - name: Create local SELinux policy
+      ansible.builtin.command:
+        cmd: ausearch -c '(k3s)' --raw | audit2allow -M my-k3s
+
+    - name: Activate local SELinux policy 
+      ansible.builtin.command:
+        cmd: semodule -X 300 -i my-k3s.pp
+  when:
+    - k3s_agent_service.changed
+
 
 - name: Enable and check K3s service
   ansible.builtin.systemd:

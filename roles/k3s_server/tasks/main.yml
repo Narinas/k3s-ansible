@@ -92,6 +92,19 @@
       ansible.builtin.lineinfile:
         path: "{{ systemd_dir }}/k3s.service.env"
         line: "K3S_TOKEN={{ token }}"
+        create: true
+
+    - name: Create local SELinux policy
+      ansible.builtin.command:
+        cmd: ausearch -c '(k3s)' --raw | audit2allow -M my-k3s
+      when:
+        - service_file_single.changed or service_file_ha.changed
+
+    - name: Activate local SELinux policy 
+      ansible.builtin.command:
+        cmd: semodule -X 300 -i my-k3s.pp
+      when:
+        - service_file_single.changed or service_file_ha.changed
 
     - name: Restart K3s service
       when:
